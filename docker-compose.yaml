@@ -1,0 +1,90 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./zenml/mysql-data:/var/lib/mysql
+    networks:
+      - dissertation
+      
+  zenml:
+    image: zenmldocker/zenml-server
+    container_name: zenml
+    ports:
+      - "8080:8080"
+    environment:
+      - ZENML_STORE_URL=mysql://root:${MYSQL_ROOT_PASSWORD}@host.docker.internal/zenml
+      - ZENML_STORE_BACKUP_DIRECTORY=/db-dump
+      - ZENML_STORE_BACKUP_STRATEGY=dump-file
+    volumes:
+      - ./zenml/mysql-data:/db-dump
+    links:
+      - mysql
+    depends_on:
+      - mysql
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dissertation
+    restart: on-failure
+
+  infisical:
+    container_name: infisical
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    image: infisical/infisical:latest-postgres
+    pull_policy: always
+    env_file: .env
+    ports:
+      - "127.0.0.1:80:8080"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - dissertation
+
+  redis:
+    image: redis
+    container_name: redis
+    env_file: .env
+    restart: always
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 6379:6379
+    networks:
+      - dissertation
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    container_name: postgres
+    image: postgres:14-alpine
+    restart: always
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dissertation
+    healthcheck:
+      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  dissertation:
+    driver: bridge

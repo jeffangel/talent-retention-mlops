@@ -1,0 +1,49 @@
+version: '3'
+
+vars:
+  INFISICAL_ENV: dev
+  COMPOSE_FILE: docker-compose.yaml
+
+tasks:
+  ensure-infisical:
+    desc: "Run infisical if it's not running"
+    silent: true
+    cmds:
+      - |
+        if ! docker compose ps --format '{{"{{"}}.Names{{"}}"}}' | grep '^infisical$'; then          
+          echo "Starting infisical container"
+          docker-compose -f {{.COMPOSE_FILE}} up -d infisical
+          echo "Waiting for infisical container..."
+          sleep 10
+        else
+          echo "infisical container is already running"
+        fi
+
+  up:
+    desc: "Start all services"
+    deps: [ensure-infisical]
+    cmds:
+      - echo "Starting services..."
+      - infisical run --env={{.INFISICAL_ENV}} -- docker compose -f {{.COMPOSE_FILE}} up -d zenml mysql
+
+  down:
+    desc: "Stop all services"
+    cmds:
+      - echo "Stopping services..."
+      - docker compose -f {{.COMPOSE_FILE}} down
+
+  restart:
+    desc: "Restart all services"
+    cmds:
+      - task: down
+      - task: up
+
+  logs:
+    desc: "Print logs for all services"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} logs -f
+
+  build:
+    desc: "Rebuild images"
+    cmds:
+      - docker compose -f {{.COMPOSE_FILE}} build
