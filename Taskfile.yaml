@@ -24,7 +24,7 @@ tasks:
     deps: [ensure-infisical]
     cmds:
       - echo "Starting services..."
-      - infisical run --env={{.INFISICAL_ENV}} -- docker compose -f {{.COMPOSE_FILE}} up -d zenml mysql
+      - infisical run --env={{.INFISICAL_ENV}} -- docker compose -f {{.COMPOSE_FILE}} up -d zenml mysql minio
 
   down:
     desc: "Stop all services"

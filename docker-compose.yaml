@@ -1,4 +1,5 @@
 services:
+# ZenML
   mysql:
     image: mysql:8.0
     container_name: mysql
@@ -9,7 +10,7 @@ services:
     volumes:
       - ./zenml/mysql-data:/var/lib/mysql
     networks:
-      - dissertation
+      - portfolio-network
       
   zenml:
     image: zenmldocker/zenml-server
@@ -29,9 +30,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - dissertation
+      - portfolio-network
     restart: on-failure
 
+# Infisical
   infisical:
     container_name: infisical
     restart: unless-stopped
@@ -41,26 +43,27 @@ services:
       redis:
         condition: service_started
     image: infisical/infisical:latest-postgres
-    pull_policy: always
+    pull_policy: if_not_present
     env_file: .env
     ports:
       - "127.0.0.1:80:8080"
     environment:
       - NODE_ENV=production
     networks:
-      - dissertation
+      - portfolio-network
 
   redis:
     image: redis
     container_name: redis
     env_file: .env
     restart: always
+    pull_policy: if_not_present
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - 6379:6379
     networks:
-      - dissertation
+      - portfolio-network
     volumes:
       - redis_data:/data
 
@@ -68,16 +71,35 @@ services:
     container_name: postgres
     image: postgres:14-alpine
     restart: always
+    pull_policy: if_not_present
     env_file: .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - dissertation
+      - portfolio-network
     healthcheck:
       test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
       interval: 5s
       timeout: 10s
       retries: 10
+
+# MinIO
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ./minio/data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    pull_policy: if_not_present
+    networks:
+      - portfolio-network
 
 volumes:
   postgres_data:
@@ -86,5 +108,5 @@ volumes:
     driver: local
 
 networks:
-  dissertation:
+  portfolio-network:
     driver: bridge
