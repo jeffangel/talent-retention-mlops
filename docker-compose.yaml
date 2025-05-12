@@ -101,12 +101,34 @@ services:
     networks:
       - portfolio-network
 
+# Runner
+  github-runner:
+    build:
+      context: .
+      dockerfile: docker/github_runner.Dockerfile
+    image: github-runner:latest
+    container_name: github-runner
+    environment:
+      - REPO_URL=https://github.com/jeffangel/talent-retention-mlops
+      - RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN}
+    volumes:
+      - github_runner_data:/home/runner/.bentoml
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - portfolio-network
+    restart: unless-stopped
+    depends_on:
+      - infisical
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
+  github_runner_data:
+    driver: local
 
 networks:
   portfolio-network:
     driver: bridge
+    external: true

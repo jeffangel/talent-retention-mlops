@@ -24,7 +24,7 @@ tasks:
     deps: [ensure-infisical]
     cmds:
       - echo "Starting services..."
-      - infisical run --env={{.INFISICAL_ENV}} -- docker compose -f {{.COMPOSE_FILE}} up -d zenml mysql minio
+      - infisical run --env={{.INFISICAL_ENV}} -- docker compose -f {{.COMPOSE_FILE}} up -d zenml mysql minio github-runner
 
   down:
     desc: "Stop all services"
@@ -47,3 +47,13 @@ tasks:
     desc: "Rebuild images"
     cmds:
       - docker compose -f {{.COMPOSE_FILE}} build
+
+  act_build:
+    desc: "Build custom Docker image for act"
+    cmds:
+      - docker build -f docker/act.Dockerfile -t act-python:3.11 .
+  
+  act_run:
+    desc: "Simulate running GitHub Actions with act and secrets from Infisical"
+    cmds:
+      - infisical run --env={{.INFISICAL_ENV}} -- bash -c "act push --secret MINIO_ACCESS_KEY=\$MINIO_ACCESS_KEY --secret MINIO_SECRET_KEY=\$MINIO_SECRET_KEY -j deploy -P self-hosted=act-python:3.11 --pull=false --container-options '--network=portfolio-network'"

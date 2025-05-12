@@ -1,0 +1,46 @@
+name: Deploy BentoML model
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    env:
+      BENTO_NAME: production
+      MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bentoml joblib xgboost scikit-learn numpy
+      
+      - name: Download model from MinIO with boto3
+        run: |
+          pip install boto3
+          python bentoml/download_model.py
+
+      - name: Build Bento
+        run: |
+          cd bentoml
+          bentoml build
+
+      - name: Containerize Bento
+        run: |
+          bentoml containerize $BENTO_NAME:latest
+
+      - name: Run Bento
+        run: |
+          nohup bentoml serve $BENTO_NAME:latest --port 3000 &

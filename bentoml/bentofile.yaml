@@ -1,0 +1,9 @@
+service: "service:svc_production"
+labels:
+  owner: jefferson
+python:
+  packages:
+    - numpy
+    - scikit-learn
+    - joblib
+    - xgboost
