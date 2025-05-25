@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # Database files
-mysql-data
+zenml_data/mysql-data/
 
 # Infisical
 .infisical_token

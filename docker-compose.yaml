@@ -8,7 +8,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
-      - ./zenml/mysql-data:/var/lib/mysql
+      - ./zenml_data/mysql-data:/var/lib/mysql
     networks:
       - portfolio-network
       
@@ -22,7 +22,9 @@ services:
       - ZENML_STORE_BACKUP_DIRECTORY=/db-dump
       - ZENML_STORE_BACKUP_STRATEGY=dump-file
     volumes:
-      - ./zenml/mysql-data:/db-dump
+      - ./zenml_data/mysql-data:/db-dump
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./zenml_data/.zenml:/root/.config/zenml
     links:
       - mysql
     depends_on:
