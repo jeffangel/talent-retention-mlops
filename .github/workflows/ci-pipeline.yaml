@@ -1,0 +1,46 @@
+name: CI ZenML Pipeline
+
+on:
+  push:
+    branches: [ ci ]
+  pull_request:
+    branches: [ ci ]
+
+jobs:
+  run-zenml:
+    runs-on: self-hosted
+
+    env:
+      INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install CLI tools (Infisical y ZenML)
+        run: |
+          curl -sSf https://infisical.com/install.sh | sh
+          pip install --upgrade pip
+          pip install 'zenml[server]'
+
+      - name: Export secrets desde Infisical
+        run: |
+          infisical login --token $INFISICAL_TOKEN
+          infisical export --format=env > .env
+
+      - name: Activar variables y correr pipeline ZenML
+        run: |
+          set -o allexport
+          source .env
+          set +o allexport
+
+          # Iniciar ZenML si no está inicializado (idempotente)
+          zenml init
+
+          # Correr el pipeline por nombre (ya debe estar registrado)
+          zenml pipeline run --name=data_validation_pipeline
